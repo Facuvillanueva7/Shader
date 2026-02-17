@@ -18,37 +18,12 @@ const settings = {
   blendModeIndex: 2,
   noiseAmount: 0.05,
   vignetteAmount: 0.45,
-  animate: true,
-  useTexture: true,
-  distortionAmount: 0.35,
-  rippleSpeed: 1.5,
-  chromaticAberration: 0.008,
-  showRing: true
+  animate: true
 };
 
 const app = document.querySelector('#app');
-const { renderer, scene, camera, uniforms, resize, setTextureFromImage } = createRenderer(settings);
+const { renderer, scene, camera, uniforms, resize } = createRenderer(settings);
 app.appendChild(renderer.domElement);
-
-/**
- * Convierte el archivo subido en una imagen y actualiza la textura del shader.
- * Analogía: tomamos tu foto, la "pegamos" como fondo y la empezamos a deformar con el pulso.
- */
-function handleImageUpload(file) {
-  const reader = new FileReader();
-
-  reader.onload = () => {
-    const image = new Image();
-    image.onload = () => {
-      setTextureFromImage(image);
-      settings.useTexture = true;
-      syncUniforms();
-    };
-    image.src = reader.result;
-  };
-
-  reader.readAsDataURL(file);
-}
 
 /**
  * Pasa los valores de UI al shader.
@@ -65,14 +40,9 @@ function syncUniforms() {
   uniforms.u_noiseAmount.value = settings.noiseAmount;
   uniforms.u_vignetteAmount.value = settings.vignetteAmount;
   uniforms.u_animate.value = settings.animate ? 1 : 0;
-  uniforms.u_useTexture.value = settings.useTexture ? 1 : 0;
-  uniforms.u_distortionAmount.value = settings.distortionAmount;
-  uniforms.u_rippleSpeed.value = settings.rippleSpeed;
-  uniforms.u_chromaticAberration.value = settings.chromaticAberration;
-  uniforms.u_showRing.value = settings.showRing ? 1 : 0;
 }
 
-createControls(settings, syncUniforms, handleImageUpload);
+createControls(settings, syncUniforms);
 syncUniforms();
 
 const clock = new Clock();
