@@ -1,0 +1,73 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #07080b;
+}
+
+canvas {
+  display: block;
+}
+
+.upload-panel {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 20;
+  width: min(360px, calc(100vw - 32px));
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  background: rgba(12, 14, 20, 0.85);
+  backdrop-filter: blur(6px);
+}
+
+.upload-panel__title {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+}
+
+.upload-panel__button {
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px;
+  cursor: pointer;
+  background: #6d28d9;
+  color: #fff;
+  font-weight: 600;
+}
+
+.upload-panel__dropzone {
+  margin-top: 8px;
+  border: 1px dashed rgba(255, 255, 255, 0.4);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.9);
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.upload-panel__dropzone.is-drag-over {
+  border-color: #22d3ee;
+  background: rgba(34, 211, 238, 0.12);
+}
+
+.upload-panel__status {
+  margin: 8px 0 0;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.78);
+}
