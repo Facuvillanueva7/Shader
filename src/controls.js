@@ -7,28 +7,14 @@ const BLEND_MODE_OPTIONS = {
 };
 
 /**
- * Construye la UI con sliders, pickers, TAP tempo y acciones de textura.
- * En simple: todas las "perillas" y botones para experimentar sin tocar código.
+ * Construye la UI con sliders, pickers y TAP tempo.
+ * En simple: todas las "perillas" para tocar el look sin editar código.
  */
-export function createControls(settings, onChange, onUploadImage) {
+export function createControls(settings, onChange) {
   const gui = new GUI({ title: 'Pulse Ring Controls' });
 
   // Array de timestamps para promediar los últimos taps y estimar BPM real.
   const tapTimes = [];
-
-  // Input de archivo oculto: lo disparamos desde un botón de la GUI.
-  const fileInput = document.createElement('input');
-  fileInput.type = 'file';
-  fileInput.accept = 'image/*';
-  fileInput.style.display = 'none';
-  document.body.appendChild(fileInput);
-
-  fileInput.addEventListener('change', (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    onUploadImage(file);
-    fileInput.value = '';
-  });
 
   const bpmController = gui.add(settings, 'bpm', 40, 220, 1).name('BPM').onChange(onChange);
   bpmController.listen();
@@ -52,17 +38,7 @@ export function createControls(settings, onChange, onUploadImage) {
   gui.add(settings, 'vignetteAmount', 0, 1, 0.01).name('Vignette Amount').onChange(onChange);
   gui.add(settings, 'animate').name('Animate').onChange(onChange);
 
-  gui.add(settings, 'useTexture').name('Use Texture').onChange(onChange);
-  gui.add(settings, 'distortionAmount', 0, 1.5, 0.01).name('Distortion Amount').onChange(onChange);
-  gui.add(settings, 'rippleSpeed', 0.1, 6, 0.05).name('Ripple Speed').onChange(onChange);
-  gui
-    .add(settings, 'chromaticAberration', 0, 0.05, 0.001)
-    .name('Chromatic Aberration')
-    .onChange(onChange);
-  gui.add(settings, 'showRing').name('Show Ring').onChange(onChange);
-
-  const actions = {
-    uploadImage: () => fileInput.click(),
+  const tapApi = {
     tapTempo: () => {
       const now = performance.now();
       tapTimes.push(now);
@@ -86,8 +62,7 @@ export function createControls(settings, onChange, onUploadImage) {
     }
   };
 
-  gui.add(actions, 'uploadImage').name('Upload Image');
-  gui.add(actions, 'tapTempo').name('TAP Tempo');
+  gui.add(tapApi, 'tapTempo').name('TAP Tempo');
 
   return gui;
 }
