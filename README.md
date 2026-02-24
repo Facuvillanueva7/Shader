@@ -1,44 +1,41 @@
-# Synesthesia MVP Shader Tool (Vite + Three.js + lil-gui)
+# Pulse Ring Shader (WebGL + GLSL)
 
-Editor visual tipo VJ con **layers + generators + modulators + scenes + post-FX**.
+Mini-app hecha con **Vite + Three.js + lil-gui** para renderizar un shader tipo halo/ring glow con pulso por BPM y controles en vivo.
 
-## Run
+## Estructura del proyecto
+
+```text
+.
+├─ index.html
+├─ package.json
+├─ README.md
+└─ src
+   ├─ controls.js
+   ├─ main.js
+   ├─ renderer.js
+   ├─ shader.glsl
+   └─ style.css
+```
+
+## Ejecutar (5 pasos)
+
 1. `npm install`
 2. `npm run dev`
-3. Abrí la URL de Vite.
+3. Abrí la URL que aparece en terminal (normalmente `http://localhost:5173`)
+4. Mové sliders y pickers en el panel derecho
+5. Usá **TAP Tempo** para capturar BPM con clicks
 
-## Arquitectura
-- `src/render/renderer.js`: renderer fullscreen + render targets.
-- `src/render/compositor.js`: composición por capas (blend/opacity) + post-FX global.
-- `src/layers/layerManager.js`: stack de capas (add/remove/duplicate/reorder/visibility).
-- `src/generators/*`: biblioteca de generadores shader (Pulse Ring + 6 adicionales).
-- `src/modulators/*`: LFO, Envelope ADSR, Audio FFT (low/mid/high + beat).
-- `src/mapping/mappingEngine.js`: mapea moduladores a parámetros de capas.
-- `src/scenes/sceneStore.js`: save/load/export/import + 5 demos.
-- `src/ui/gui.js`: UI lil-gui para Layers, Modulators, Mappings, Scenes y PostFX.
+## Qué hace cada archivo
 
-## Workflow rápido
-- **Layers**: Add Layer, cambiar Generator, blend mode, opacity, up/down, duplicate, delete.
-- **Modulators**: crear LFO/Envelope/Audio, ajustar params.
-- **Mappings**: vincular `modulator -> layer:param` con amount/min/max/curve.
-- **Scenes**: Save, Load, Next/Prev, Export JSON, Import JSON.
-- **Transiciones**: crossfade por `Crossfade Sec` + atajos `←/→`.
-- **Audio**: botón `Enable Mic` para activar FFT.
-- **Envelope**: tecla `Space` para trigger gate.
+- `src/shader.glsl`: toda la lógica visual del halo/pulso (fragment shader).
+- `src/renderer.js`: inicializa WebGL (Three.js), canvas fullscreen y uniforms.
+- `src/controls.js`: crea la UI (sliders, selectores, colores, TAP tempo).
+- `src/main.js`: conecta renderer + controles y corre el loop.
 
-## Generators incluidos
-1. Pulse Ring (migrado del shader original)
-2. SDF Circle
-3. SDF Rounded Box
-4. SDF Star
-5. Stripes + Checker
-6. Noise Warp (fbm + displacement)
-7. Rays
+## Cómo editar el shader sin romper nada
 
-## Post FX global (MVP)
-- Vignette
-- Grain
-- Chromatic aberration
-- Brightness / Contrast / Saturation
-- Fake bloom (threshold blur aproximado)
-
+1. **No renombres uniforms** (`u_time`, `u_bpm`, etc.) a menos que también actualices `main.js`/`renderer.js`.
+2. Cambiá valores de look en la parte de `ring`, `radialGradient`, `grain` y `vignette` de forma gradual.
+3. Si la imagen desaparece, revisá `clamp(mixedColor, 0.0, 1.0)` y que `gl_FragColor` siga asignándose.
+4. Para cambios seguros, tocá primero constantes chicas (ej. multiplicadores `1.2`, `0.35`) y probá.
+5. Si querés experimentar, duplicá una sección y comentá la anterior para poder volver rápido.
