@@ -20,8 +20,6 @@ uniform vec3 u_colorB;
 uniform float u_pulseStrength;
 uniform float u_ringRadius;
 uniform float u_ringSoftness;
-uniform float u_vignetteAmount;
-uniform float u_animate;
 
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
 
@@ -32,8 +30,7 @@ void main() {
   float dist = length(centered);
 
   float beatsPerSecond = u_bpm / 60.0;
-  float time = u_time * u_animate;
-  float beatPhase = time * beatsPerSecond * 6.2831853;
+  float beatPhase = u_time * beatsPerSecond * 6.2831853;
   float pulse = pow(0.5 + 0.5 * cos(beatPhase), 3.0);
   float pulsedRadius = u_ringRadius + pulse * u_pulseStrength * 0.2;
 
@@ -45,10 +42,8 @@ void main() {
   float radialGradient = smoothstep(0.0, 1.0, 1.0 - dist * 1.8);
   vec3 baseColor = mix(u_colorA, u_colorB, clamp(dist * 1.4 + pulse * 0.25, 0.0, 1.0));
   vec3 color = baseColor * (ring + radialGradient * 0.35);
-  float grain = (hash(gl_FragCoord.xy + time * 120.0) - 0.5) * u_noiseAmount;
+  float grain = (hash(gl_FragCoord.xy + u_time * 120.0) - 0.5) * u_noiseAmount;
   color += grain;
-  float vignette = smoothstep(0.95, 0.18, length(centered));
-  color *= mix(1.0, vignette, u_vignetteAmount);
   gl_FragColor = vec4(clamp(color, 0.0, 1.0), clamp(max(ring, radialGradient * 0.8), 0.0, 1.0));
 }
 `;
@@ -62,9 +57,7 @@ export const pulseRingGenerator = {
     pulseStrength: 0.8,
     ringRadius: 0.24,
     ringSoftness: 0.06,
-    noiseAmount: 0.05,
-    vignetteAmount: 0.35,
-    animate: true
+    noiseAmount: 0.05
   },
   uiSchema: [
     { key: 'colorA', type: 'color', label: 'Color A' },
@@ -72,9 +65,7 @@ export const pulseRingGenerator = {
     { key: 'pulseStrength', type: 'number', min: 0, max: 2, step: 0.01, label: 'Pulse Strength' },
     { key: 'ringRadius', type: 'number', min: 0.05, max: 0.6, step: 0.005, label: 'Ring Radius' },
     { key: 'ringSoftness', type: 'number', min: 0.005, max: 0.25, step: 0.005, label: 'Softness' },
-    { key: 'noiseAmount', type: 'number', min: 0, max: 0.4, step: 0.005, label: 'Noise' },
-    { key: 'vignetteAmount', type: 'number', min: 0, max: 1, step: 0.01, label: 'Vignette' },
-    { key: 'animate', type: 'select', options: { On: true, Off: false }, label: 'Animate' }
+    { key: 'noiseAmount', type: 'number', min: 0, max: 0.4, step: 0.005, label: 'Noise' }
   ],
   buildMaterial(params) {
     return new THREE.ShaderMaterial({
@@ -90,9 +81,7 @@ export const pulseRingGenerator = {
         u_pulseStrength: { value: params.pulseStrength },
         u_ringRadius: { value: params.ringRadius },
         u_ringSoftness: { value: params.ringSoftness },
-        u_noiseAmount: { value: params.noiseAmount },
-        u_vignetteAmount: { value: params.vignetteAmount },
-        u_animate: { value: params.animate ? 1 : 0 }
+        u_noiseAmount: { value: params.noiseAmount }
       }
     });
   },
@@ -106,7 +95,5 @@ export const pulseRingGenerator = {
     material.uniforms.u_ringRadius.value = params.ringRadius;
     material.uniforms.u_ringSoftness.value = params.ringSoftness;
     material.uniforms.u_noiseAmount.value = params.noiseAmount;
-    material.uniforms.u_vignetteAmount.value = params.vignetteAmount;
-    material.uniforms.u_animate.value = params.animate ? 1 : 0;
   }
 };
