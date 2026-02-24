@@ -1,142 +1,65 @@
-import { Clock, Vector2 } from 'three';
-import { createRenderer } from './render/renderer';
-import { Compositor } from './render/compositor';
-import { LayerManager } from './layers/layerManager';
-import { generatorMap, generators } from './generators';
-import { ModulatorManager } from './modulators';
-import { MappingEngine } from './mapping/mappingEngine';
-import { SceneStore, lerpSceneState } from './scenes/sceneStore';
-import { createAppGUI } from './ui/gui';
+import { Clock, Color } from 'three';
+import { createRenderer } from './renderer';
+import { createControls } from './controls';
 import './style.css';
 
-const appNode = document.querySelector('#app');
-const renderCtx = createRenderer();
-appNode.appendChild(renderCtx.renderer.domElement);
-
-const layerManager = new LayerManager();
-const compositor = new Compositor(renderCtx);
-const modManager = new ModulatorManager();
-const mappingEngine = new MappingEngine();
-const sceneStore = new SceneStore();
-sceneStore.loadLocal();
-
-const global = { bpm: 120 };
-const sceneState = { index: 0, name: 'Scene', transitionDuration: 1 };
-
-const app = {
-  global,
-  layerManager,
-  generatorMap,
-  modManager,
-  mappingEngine,
-  compositor,
-  sceneState,
-  addLayer: () => { layerManager.addLayer('pulseRing'); ui.refresh(); },
-  getNumericTargets: () => layerManager.layers.flatMap((layer) => Object.keys(layer.baseParams)
-    .filter((k) => typeof layer.baseParams[k] === 'number')
-    .map((key) => `layer:${layer.id}.${key}`)),
-  addMapping: () => {
-    const modId = modManager.modulators[0]?.id;
-    const target = app.getNumericTargets()[0];
-    if (!modId || !target) return;
-    mappingEngine.add({ modId, target, amount: 0.35, min: 0, max: 1, curve: 'linear', sourceBand: '' });
-  },
-  saveScene: () => {
-    sceneStore.save(sceneState.name || `Scene ${Date.now()}`, serializeState());
-  },
-  loadScene: (index) => startTransition(sceneStore.scenes[index]?.state),
-  nextScene: () => {
-    sceneState.index = (sceneState.index + 1) % sceneStore.scenes.length;
-    app.loadScene(sceneState.index);
-  },
-  prevScene: () => {
-    sceneState.index = (sceneState.index - 1 + sceneStore.scenes.length) % sceneStore.scenes.length;
-    app.loadScene(sceneState.index);
-  },
-  exportScenes: () => {
-    const text = sceneStore.exportJSON();
-    prompt('Copy scene JSON', text);
-  },
-  importScenes: () => {
-    const text = prompt('Paste scene JSON');
-    if (!text) return;
-    sceneStore.importJSON(text);
-    sceneState.index = 0;
-  }
+/**
+ * Estado global editable desde UI.
+ * Pensalo como el panel de "perillas" que alimenta uniforms del shader.
+ */
+const settings = {
+  bpm: 120,
+  pulseStrength: 0.8,
+  ringRadius: 0.24,
+  ringSoftness: 0.06,
+  colorA: '#8b5cf6',
+  colorB: '#22d3ee',
+  blendMode: 'screen',
+  blendModeIndex: 2,
+  noiseAmount: 0.05,
+  vignetteAmount: 0.45,
+  animate: true
 };
 
-const ui = createAppGUI(app);
+const app = document.querySelector('#app');
+const { renderer, scene, camera, uniforms, resize } = createRenderer(settings);
+app.appendChild(renderer.domElement);
 
-function serializeState() {
-  return {
-    bpm: global.bpm,
-    layers: layerManager.toJSON(),
-    modulators: modManager.toJSON(),
-    mappings: mappingEngine.toJSON(),
-    postFX: { ...compositor.postSettings }
-  };
+/**
+ * Pasa los valores de UI al shader.
+ * Es el "puente" entre controles humanos y matemática GLSL.
+ */
+function syncUniforms() {
+  uniforms.u_bpm.value = settings.bpm;
+  uniforms.u_pulseStrength.value = settings.pulseStrength;
+  uniforms.u_ringRadius.value = settings.ringRadius;
+  uniforms.u_ringSoftness.value = settings.ringSoftness;
+  uniforms.u_colorA.value = new Color(settings.colorA);
+  uniforms.u_colorB.value = new Color(settings.colorB);
+  uniforms.u_blendMode.value = settings.blendModeIndex;
+  uniforms.u_noiseAmount.value = settings.noiseAmount;
+  uniforms.u_vignetteAmount.value = settings.vignetteAmount;
+  uniforms.u_animate.value = settings.animate ? 1 : 0;
 }
 
-let transition = null;
-function startTransition(targetState) {
-  if (!targetState) return;
-  transition = {
-    start: performance.now(),
-    duration: sceneState.transitionDuration * 1000,
-    from: serializeState(),
-    to: targetState
-  };
-}
-
-function applyState(state) {
-  global.bpm = state.bpm;
-  layerManager.loadFromJSON(state.layers);
-  modManager.loadFromJSON(state.modulators || []);
-  mappingEngine.loadFromJSON(state.mappings || []);
-  Object.assign(compositor.postSettings, state.postFX || {});
-  ui.refresh();
-}
-
-window.addEventListener('keydown', (event) => {
-  if (event.code === 'ArrowRight') app.nextScene();
-  if (event.code === 'ArrowLeft') app.prevScene();
-  if (event.code === 'Space') modManager.triggerEnvelope(true);
-});
-window.addEventListener('keyup', (event) => {
-  if (event.code === 'Space') modManager.triggerEnvelope(false);
-});
+createControls(settings, syncUniforms);
+syncUniforms();
 
 const clock = new Clock();
-let prevTime = 0;
-function tick() {
-  requestAnimationFrame(tick);
-  const elapsed = clock.getElapsedTime();
-  const dt = Math.max(0.001, elapsed - prevTime);
-  prevTime = elapsed;
 
-  if (transition) {
-    const p = (performance.now() - transition.start) / transition.duration;
-    const t = Math.min(1, Math.max(0, p));
-    const eased = t * t * (3 - 2 * t);
-    const blendState = lerpSceneState(transition.from, transition.to, eased);
-    applyState(blendState);
-    if (t >= 1) {
-      applyState(transition.to);
-      transition = null;
-    }
+/**
+ * Loop de render continuo.
+ * Si animate está apagado, el tiempo visual queda congelado y el halo se mantiene estable.
+ */
+function renderLoop() {
+  requestAnimationFrame(renderLoop);
+
+  if (settings.animate) {
+    uniforms.u_time.value = clock.getElapsedTime();
   }
 
-  modManager.update(elapsed, dt);
-  mappingEngine.apply(layerManager, modManager);
-
-  const globals = { time: elapsed, bpm: global.bpm, resolution: new Vector2(window.innerWidth, window.innerHeight), generators };
-  compositor.render(layerManager.layers, globals);
+  renderer.render(scene, camera);
 }
 
-tick();
-
-window.addEventListener('resize', () => {
-  renderCtx.resize();
-  compositor.resize(window.innerWidth, window.innerHeight);
-});
-compositor.resize(window.innerWidth, window.innerHeight);
+window.addEventListener('resize', resize);
+renderLoop();
