@@ -19,7 +19,12 @@ export function createLayer(generatorId = 'pulseRing') {
 
 export class LayerManager {
   constructor() {
-    this.layers = [createLayer('pulseRing')];
+    const base = createLayer('pulseRing');
+    const texture = createLayer('stripesChecker');
+    texture.name = 'Starter Pattern';
+    texture.blendMode = 'overlay';
+    texture.opacity = 0.35;
+    this.layers = [base, texture];
   }
   addLayer(generatorId) { this.layers.push(createLayer(generatorId)); return this.layers.at(-1); }
   removeLayer(id) { this.layers = this.layers.filter((l) => l.id !== id); }
