@@ -1,4 +1,3 @@
-// LEGACY: old single-shader pipeline kept for reference. Not used by src/main.js.
 import * as THREE from 'three';
 import fragmentShader from './shader.glsl?raw';
 
